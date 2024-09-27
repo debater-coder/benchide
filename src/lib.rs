@@ -48,7 +48,6 @@ impl App {
             _ => {}
         }
 
-        println!("{}", self.lines.len());
         if self.cursor_position.0 >= self.lines.len() {
             self.cursor_position.0 = self.lines.len() - 1
         }
@@ -57,7 +56,6 @@ impl App {
             self.cursor_position.1 = self.lines[self.cursor_position.0].len()
         }
 
-        println!("{:?}", self.cursor_position)
     }
 
     pub fn update(&mut self, message: Message) {
@@ -67,8 +65,35 @@ impl App {
             Message::Char(character) => {
                 let (y, x) = self.cursor_position;
 
-                self.lines[y].insert(x, character);
-                self.cursor_position.1 += 1;
+                match character {
+                    '\x08' => {
+                        if x > 0 {
+                            self.lines[y].remove(x - 1);
+                            self.cursor_position.1 -= 1;
+                        } else if y > 0 {
+                            let original_line = &self.lines[y].clone();
+                            let restored_position = self.lines[y - 1].len();
+                            self.lines[y - 1] += original_line;
+                            self.lines.remove(y);
+                            self.cursor_position = (y - 1, restored_position);
+                        }
+                    }
+
+                    '\r' => {
+                        let original_line = self.lines[y].clone();
+                        let (first, last) = original_line.split_at(x);
+
+                        self.lines[y] = first.to_owned();
+
+                        self.lines.insert(y + 1, last.to_owned());
+                        self.cursor_position = (y + 1, 0);
+                    }
+                    _ => {
+                        self.lines[y].insert(x, character);
+                        self.cursor_position.1 += 1;
+                    }
+                }
+
             }
         }
     }
