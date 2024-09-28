@@ -1,3 +1,4 @@
+use inkjet::Highlighter;
 use macroquad::prelude::*;
 use crate::editor::{Editor, EditorMessage};
 use crate::theme::Theme;
@@ -10,7 +11,8 @@ pub struct App {
     theme: Theme,
     pub font: Option<Font>,
     pub font_size: u16,
-    editor: Editor
+    editor: Editor,
+    highlighter: Highlighter
 }
 
 impl Default for App {
@@ -19,7 +21,8 @@ impl Default for App {
             theme: Theme::mocha(),
             font: None,
             font_size: 16,
-            editor: Editor::new(Rect::new(20.0, 20.0, 400.0, 400.0))
+            editor: Editor::new(Rect::new(20.0, 20.0, 400.0, 400.0)),
+            highlighter: Highlighter::new()
         }
     }
 }
@@ -32,7 +35,7 @@ impl App {
 
     pub fn update(&mut self, message: Message) {
         match message {
-            Message::Edit(edit) => self.editor.update(edit)
+            Message::Edit(edit) => self.editor.update(edit, &mut self.highlighter, &self.theme)
         }
     }
 

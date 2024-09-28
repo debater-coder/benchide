@@ -1,14 +1,26 @@
 use macroquad::prelude::*;
 use crate::theme::Theme;
 use crate::window::set_camera_window;
+use inkjet::{Highlighter, Language};
+use inkjet::constants::HIGHLIGHT_NAMES;
+use inkjet::theme::vendored;
+use inkjet::tree_sitter_highlight::HighlightEvent;
+
+#[derive(Debug)]
+struct ColorSpan {
+    start: (usize, usize),
+    end: (usize, usize),
+    color: Color
+}
 
 pub(crate) struct Editor {
     lines: Vec<String>,
     cursor_position: (usize, usize), // line, character
+    colors: Vec<ColorSpan>,
     window: Rect
 }
 
-pub(crate) enum EditorMessage {
+pub enum EditorMessage {
     Keypress(KeyCode),
     Char(char),
 }
@@ -18,6 +30,7 @@ impl Editor {
         Self {
             lines: vec!["".to_owned()],
             cursor_position: (0, 0),
+            colors: vec![],
             window
         }
     }
@@ -55,7 +68,7 @@ impl Editor {
         self.cursor_position.1 += string.len();
     }
 
-    pub fn update(&mut self, message: EditorMessage) {
+    pub fn update(&mut self, message: EditorMessage, highlighter: &mut Highlighter, theme: &Theme) {
         match message {
             EditorMessage::Keypress(key) =>
                 match key {
@@ -104,9 +117,61 @@ impl Editor {
 
             }
         }
+
+        if let Err(_) =  self.syntax_highlight(highlighter, theme) {
+            self.colors = vec![]
+        }
+    }
+
+    fn idx_to_cursor(code: &str, idx: usize) -> (usize, usize) {
+        let slice = &code[..idx];
+        let lines: Vec<&str> = slice.split("\n").collect();
+
+        (lines.len(), lines.last().unwrap().len())
+    }
+
+    fn syntax_highlight(&mut self, highlighter: &mut Highlighter, theme: &Theme) -> inkjet::Result<()> {
+        let code = self.lines.join("\n");
+        let highlights = highlighter.highlight_raw(Language::Python, &code)?;
+
+        self.colors = vec![];
+
+        let mut color = theme.text;
+
+        for highlight in highlights {
+            let highlight = highlight?;
+
+            match highlight {
+
+                HighlightEvent::HighlightStart(style) => {
+                    let name = HIGHLIGHT_NAMES[style.0];
+                    let inkjet_theme = inkjet::theme::Theme::from_helix(vendored::CATPPUCCIN_MOCHA)?;
+                    if let Some(fg) = inkjet_theme.get_style(name).and_then(|s| s.fg) {
+                        color = Color::from_rgba(fg.r, fg.g, fg.b, 255);
+                    }
+
+                }
+
+                HighlightEvent::Source { start, end } => {
+                    self.colors.push(ColorSpan {
+                        start: Self::idx_to_cursor(&code, start),
+                        end: Self::idx_to_cursor(&code, end),
+                        color,
+                    });
+                }
+
+                HighlightEvent::HighlightEnd => {
+                    color = theme.text;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn view(&self, theme: &Theme, font: Option<&Font>, font_size: u16) {
+        println!("{:?}", self.colors);
+
         draw_rectangle(self.window.x, self.window.y, self.window.w, self.window.h, theme.surface0);
         set_camera_window(self.window, vec2(0.0, 0.0));
 
