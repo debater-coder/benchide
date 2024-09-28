@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 use crate::theme::Theme;
-use crate::window::set_camera_window;
+use crate::window::{set_camera_window, set_fullscreen_camera};
 use inkjet::{Highlighter, Language};
 use inkjet::constants::HIGHLIGHT_NAMES;
 use inkjet::theme::vendored;
@@ -170,7 +170,7 @@ impl Editor {
     }
 
     pub fn view(&self, theme: &Theme, font: Option<&Font>, font_size: u16, focused: bool) {
-        set_default_camera();
+        set_fullscreen_camera();
         draw_rectangle(self.window.x, self.window.y, self.window.w, self.window.h, theme.surface0);
 
         set_camera_window(self.window, vec2(0.0, 0.0));

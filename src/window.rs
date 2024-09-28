@@ -11,3 +11,7 @@ pub(crate) fn set_camera_window(window: Rect, offset: Vec2) {
 
     set_camera(&camera);
 }
+
+pub(crate) fn set_fullscreen_camera() {
+    set_camera_window(Rect::new(0.0, 0.0, screen_width(), screen_height()), Vec2::ZERO);
+}
