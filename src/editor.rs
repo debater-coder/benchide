@@ -127,7 +127,7 @@ impl Editor {
         let slice = &code[..idx];
         let lines: Vec<&str> = slice.split("\n").collect();
 
-        (lines.len(), lines.last().unwrap().len())
+        (lines.len() - 1, lines.last().unwrap().len())
     }
 
     fn syntax_highlight(&mut self, highlighter: &mut Highlighter, theme: &Theme) -> inkjet::Result<()> {
@@ -166,8 +166,6 @@ impl Editor {
             }
         }
 
-        println!("{:?}", &self.colors);
-
         Ok(())
     }
 
@@ -179,20 +177,22 @@ impl Editor {
         let mut x = 0.0;
         let mut y = font_size as f32;
 
-        let mut span_index = 0;
-
         for (i, line) in self.lines.iter().enumerate() {
             for (j, glyph) in line.chars().enumerate() {
                 if (i, j) == self.cursor_position {
                     draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text)
                 }
 
-                while self.colors[span_index].end.0 < i || self.colors[span_index].end.1 < j {
-                    span_index += 1
-                }
+                let span = self.colors.iter().find(|span| {
+                    span.start.0 <= i && i <= span.end.0 && span.start.1 <= j && j < span.end.1
+                });
+
+                // println!("({i}, {j}) is in {:?}", span);
+
+                let color = span.and_then(|span| Some(span.color)).unwrap_or(theme.text);
 
                 let dimensions = draw_text_ex(&glyph.to_string(), x, y, TextParams {
-                    color: self.colors[span_index].color,
+                    color,
                     font,
                     font_size,
                     ..Default::default()

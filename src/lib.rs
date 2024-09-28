@@ -54,6 +54,7 @@ impl App {
 
         clear_background(self.theme.base);
         set_default_camera();
+        // draw_text(format!("FPS: {}", get_fps()).as_str(), screen_width() - 160., 32., 32., WHITE);
 
         self.editor.view(&self.theme, self.font.as_ref(), self.font_size);
 
