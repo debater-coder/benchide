@@ -17,7 +17,7 @@ pub(crate) struct Editor {
     lines: Vec<String>,
     cursor_position: (usize, usize), // line, character
     colors: Vec<ColorSpan>,
-    window: Rect
+    pub(crate) window: Rect
 }
 
 pub enum EditorMessage {
@@ -169,9 +169,10 @@ impl Editor {
         Ok(())
     }
 
-    pub fn view(&self, theme: &Theme, font: Option<&Font>, font_size: u16) {
-
+    pub fn view(&self, theme: &Theme, font: Option<&Font>, font_size: u16, focused: bool) {
+        set_default_camera();
         draw_rectangle(self.window.x, self.window.y, self.window.w, self.window.h, theme.surface0);
+
         set_camera_window(self.window, vec2(0.0, 0.0));
 
         let mut x = 0.0;
@@ -179,15 +180,13 @@ impl Editor {
 
         for (i, line) in self.lines.iter().enumerate() {
             for (j, glyph) in line.chars().enumerate() {
-                if (i, j) == self.cursor_position {
+                if (i, j) == self.cursor_position && focused {
                     draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text)
                 }
 
                 let span = self.colors.iter().find(|span| {
                     span.start.0 <= i && i <= span.end.0 && span.start.1 <= j && j < span.end.1
                 });
-
-                // println!("({i}, {j}) is in {:?}", span);
 
                 let color = span.and_then(|span| Some(span.color)).unwrap_or(theme.text);
 
@@ -201,7 +200,7 @@ impl Editor {
                 x += dimensions.width;
             }
 
-            if (i, line.len()) == self.cursor_position {
+            if (i, line.len()) == self.cursor_position && focused {
                 draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text)
             }
 
