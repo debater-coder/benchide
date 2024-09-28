@@ -58,9 +58,21 @@ impl App {
 
     }
 
+    fn insert_str_single_line(&mut self, string: &str) {
+        self.lines[self.cursor_position.0].insert_str(self.cursor_position.1, string);
+        self.cursor_position.1 += string.len();
+    }
+
     pub fn update(&mut self, message: Message) {
         match message {
-            Message::Keypress(key) => self.move_cursor(key),
+            Message::Keypress(key) =>
+                match key {
+                    KeyCode::Up | KeyCode::Left | KeyCode::Right | KeyCode::Down => self.move_cursor(key),
+                    KeyCode::Tab => {
+                        self.insert_str_single_line("    ")
+                    }
+                    _ => {}
+                },
 
             Message::Char(character) => {
                 let (y, x) = self.cursor_position;
@@ -77,6 +89,10 @@ impl App {
                             self.lines.remove(y);
                             self.cursor_position = (y - 1, restored_position);
                         }
+                    }
+
+                    '\t' => {
+                        // Handled by Message::Keypress
                     }
 
                     '\r' => {
