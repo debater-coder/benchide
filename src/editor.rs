@@ -166,11 +166,12 @@ impl Editor {
             }
         }
 
+        println!("{:?}", &self.colors);
+
         Ok(())
     }
 
     pub fn view(&self, theme: &Theme, font: Option<&Font>, font_size: u16) {
-        println!("{:?}", self.colors);
 
         draw_rectangle(self.window.x, self.window.y, self.window.w, self.window.h, theme.surface0);
         set_camera_window(self.window, vec2(0.0, 0.0));
@@ -178,6 +179,7 @@ impl Editor {
         let mut x = 0.0;
         let mut y = font_size as f32;
 
+        let mut span_index = 0;
 
         for (i, line) in self.lines.iter().enumerate() {
             for (j, glyph) in line.chars().enumerate() {
@@ -185,8 +187,12 @@ impl Editor {
                     draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text)
                 }
 
+                while self.colors[span_index].end.0 < i || self.colors[span_index].end.1 < j {
+                    span_index += 1
+                }
+
                 let dimensions = draw_text_ex(&glyph.to_string(), x, y, TextParams {
-                    color: theme.text,
+                    color: self.colors[span_index].color,
                     font,
                     font_size,
                     ..Default::default()
