@@ -6,18 +6,30 @@ use inkjet::constants::HIGHLIGHT_NAMES;
 use inkjet::theme::vendored;
 use inkjet::tree_sitter_highlight::HighlightEvent;
 
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
+pub struct Point {
+    row: usize,
+    column: usize,
+}
+
+impl Point {
+    pub fn new(row: usize, column: usize) -> Self {
+        Point { row, column }
+    }
+}
+
 #[derive(Debug)]
 struct ColorSpan {
-    start: (usize, usize),
-    end: (usize, usize),
-    color: Color
+    start: Point,
+    end: Point,
+    color: Color,
 }
 
 pub(crate) struct Editor {
     lines: Vec<String>,
-    cursor_position: (usize, usize), // line, character
+    cursor_position: Point, // line, character
     colors: Vec<ColorSpan>,
-    pub(crate) window: Rect
+    pub(crate) window: Rect,
 }
 
 pub enum EditorMessage {
@@ -29,9 +41,9 @@ impl Editor {
     pub fn new(window: Rect) -> Self {
         Self {
             lines: vec!["".to_owned()],
-            cursor_position: (0, 0),
+            cursor_position: Point::new(0, 0),
             colors: vec![],
-            window
+            window,
         }
     }
 
@@ -39,33 +51,32 @@ impl Editor {
         use KeyCode::*;
         match key {
             Up => {
-                if self.cursor_position.0 > 0 {
-                    self.cursor_position.0 -= 1
+                if self.cursor_position.row > 0 {
+                    self.cursor_position.row -= 1
                 }
             }
             Left => {
-                if self.cursor_position.1 > 0 {
-                    self.cursor_position.1 -= 1
+                if self.cursor_position.column > 0 {
+                    self.cursor_position.column -= 1
                 }
             }
-            Right => self.cursor_position.1 += 1,
-            Down => self.cursor_position.0 += 1,
+            Right => self.cursor_position.column += 1,
+            Down => self.cursor_position.row += 1,
             _ => {}
         }
 
-        if self.cursor_position.0 >= self.lines.len() {
-            self.cursor_position.0 = self.lines.len() - 1
+        if self.cursor_position.row >= self.lines.len() {
+            self.cursor_position.row = self.lines.len() - 1
         }
 
-        if self.cursor_position.1 >= self.lines[self.cursor_position.0].len() {
-            self.cursor_position.1 = self.lines[self.cursor_position.0].len()
+        if self.cursor_position.column >= self.lines[self.cursor_position.row].len() {
+            self.cursor_position.column = self.lines[self.cursor_position.row].len()
         }
-
     }
 
     fn insert_str_single_line(&mut self, string: &str) {
-        self.lines[self.cursor_position.0].insert_str(self.cursor_position.1, string);
-        self.cursor_position.1 += string.len();
+        self.lines[self.cursor_position.row].insert_str(self.cursor_position.column, string);
+        self.cursor_position.column += string.len();
     }
 
     pub fn update(&mut self, message: EditorMessage, highlighter: &mut Highlighter, theme: &Theme) {
@@ -80,19 +91,19 @@ impl Editor {
                 },
 
             EditorMessage::Char(character) => {
-                let (y, x) = self.cursor_position;
+                let Point { row: y, column: x } = self.cursor_position;
 
                 match character {
                     '\x08' => {
                         if x > 0 {
                             self.lines[y].remove(x - 1);
-                            self.cursor_position.1 -= 1;
+                            self.cursor_position.column -= 1;
                         } else if y > 0 {
                             let original_line = &self.lines[y].clone();
                             let restored_position = self.lines[y - 1].len();
                             self.lines[y - 1] += original_line;
                             self.lines.remove(y);
-                            self.cursor_position = (y - 1, restored_position);
+                            self.cursor_position = Point::new(y - 1, restored_position);
                         }
                     }
 
@@ -107,27 +118,26 @@ impl Editor {
                         self.lines[y] = first.to_owned();
 
                         self.lines.insert(y + 1, last.to_owned());
-                        self.cursor_position = (y + 1, 0);
+                        self.cursor_position = Point::new(y + 1, 0);
                     }
                     _ => {
                         self.lines[y].insert(x, character);
-                        self.cursor_position.1 += 1;
+                        self.cursor_position.column += 1;
                     }
                 }
-
             }
         }
 
-        if let Err(_) =  self.syntax_highlight(highlighter, theme) {
+        if let Err(_) = self.syntax_highlight(highlighter, theme) {
             self.colors = vec![]
         }
     }
 
-    fn idx_to_cursor(code: &str, idx: usize) -> (usize, usize) {
+    fn idx_to_point(code: &str, idx: usize) -> Point {
         let slice = &code[..idx];
         let lines: Vec<&str> = slice.split("\n").collect();
 
-        (lines.len() - 1, lines.last().unwrap().len())
+        Point::new(lines.len() - 1, lines.last().unwrap().len())
     }
 
     fn syntax_highlight(&mut self, highlighter: &mut Highlighter, theme: &Theme) -> inkjet::Result<()> {
@@ -142,20 +152,18 @@ impl Editor {
             let highlight = highlight?;
 
             match highlight {
-
                 HighlightEvent::HighlightStart(style) => {
                     let name = HIGHLIGHT_NAMES[style.0];
                     let inkjet_theme = inkjet::theme::Theme::from_helix(vendored::CATPPUCCIN_MOCHA)?;
                     if let Some(fg) = inkjet_theme.get_style(name).and_then(|s| s.fg) {
                         color = Color::from_rgba(fg.r, fg.g, fg.b, 255);
                     }
-
                 }
 
                 HighlightEvent::Source { start, end } => {
                     self.colors.push(ColorSpan {
-                        start: Self::idx_to_cursor(&code, start),
-                        end: Self::idx_to_cursor(&code, end),
+                        start: Self::idx_to_point(&code, start),
+                        end: Self::idx_to_point(&code, end),
                         color,
                     });
                 }
@@ -194,12 +202,14 @@ impl Editor {
                 x += dimensions.width;
             }
             for (j, glyph) in line.chars().enumerate() {
-                if (i, j) == self.cursor_position && focused {
-                    draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text)
+                let curr = Point::new(i, j);
+
+                if curr == self.cursor_position && focused {
+                    draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text);
                 }
 
                 let span = self.colors.iter().find(|span| {
-                    span.start.0 <= i && i <= span.end.0 && span.start.1 <= j && j < span.end.1
+                    span.start <= curr && curr < span.end
                 });
 
                 let color = span.and_then(|span| Some(span.color)).unwrap_or(theme.text);
@@ -214,7 +224,7 @@ impl Editor {
                 x += dimensions.width;
             }
 
-            if (i, line.len()) == self.cursor_position && focused {
+            if Point::new(i, line.len()) == self.cursor_position && focused {
                 draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text)
             }
 
