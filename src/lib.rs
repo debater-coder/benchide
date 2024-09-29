@@ -64,7 +64,7 @@ impl App {
             }
 
             if let Some((uuid, _)) = hovered_editor {
-                messages.push(Message::Scroll(*uuid, Vec2::from(mouse_wheel()) * 0.25 * vec2(1.0, 0.0)));
+                messages.push(Message::Scroll(*uuid, Vec2::from(mouse_wheel()) * 0.25 * vec2(0.0, -1.0)));
             }
         }
 

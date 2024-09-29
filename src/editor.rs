@@ -84,7 +84,17 @@ impl Editor {
     }
 
     pub fn scroll(&mut self, offset: Vec2) {
-        self.offset += offset
+        self.offset += offset;
+
+        if self.offset.y > self.lines.len() as f32 * self.font_size as f32 - self.window.h {
+            self.offset.y = self.lines.len() as f32 * self.font_size as f32 - self.window.h;
+        }
+
+
+        if self.offset.y < 0.0 {
+            self.offset.y = 0.0;
+        }
+
     }
 
     pub fn update(&mut self, message: EditorMessage, highlighter: &mut Highlighter, theme: &Theme) {
@@ -142,7 +152,6 @@ impl Editor {
 
         let effective_height = self.cursor_position.row as f32 * self.font_size as f32 - self.offset.y;
 
-        println!("{}", effective_height);
 
         if effective_height < 0.0 {
             self.offset.y += effective_height;
