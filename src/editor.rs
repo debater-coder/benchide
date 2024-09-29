@@ -212,8 +212,25 @@ impl Editor {
         format!("{:>width$} ", i + 1)
     }
 
+    pub fn titlebar(&self) -> Rect {
+
+        let titlebar_height = self.font_size as f32 + 8.0;
+        Rect::new(self.window.x, self.window.y - titlebar_height, self.window.w, titlebar_height)
+    }
+
     pub fn view(&self, theme: &Theme, font: Option<&Font>, focused: bool) {
         set_fullscreen_camera();
+
+        let titlebar = self.titlebar();
+        draw_rectangle(titlebar.x, titlebar.y, titlebar.w, titlebar.h, theme.surface1);
+
+        draw_text_ex("main.py", self.window.x, self.window.y - 4.0, TextParams {
+            color: if focused { theme.lavender } else { theme.text },
+            font,
+            font_size: self.font_size,
+            ..Default::default()
+        });
+
         draw_rectangle(self.window.x, self.window.y, self.window.w, self.window.h, theme.surface0);
 
         set_camera_window(self.window, self.offset);
@@ -222,21 +239,19 @@ impl Editor {
         let mut y = self.font_size as f32;
 
         for (i, line) in self.lines.iter().enumerate() {
-            for symbol in self.format_line_number(i).chars() {
-                let dimensions = draw_text_ex(&symbol.to_string(), x, y, TextParams {
-                    color: theme.overlay1,
-                    font,
-                    font_size: self.font_size,
-                    ..Default::default()
-                });
-                x += dimensions.width;
-            }
+            let dimensions = draw_text_ex(&self.format_line_number(i).to_string(), x, y, TextParams {
+                color: theme.overlay1,
+                font,
+                font_size: self.font_size,
+                ..Default::default()
+            });
+            x += dimensions.width;
 
             for (j, glyph) in line.chars().enumerate() {
                 let curr = Point::new(i, j);
 
                 if curr == self.cursor_position && focused {
-                    draw_rectangle(x, y - self.font_size as f32, 2.0, self.font_size as f32, theme.text);
+                    draw_rectangle(x, y - self.font_size as f32, 2.0, self.font_size as f32, theme.rosewater);
                 }
 
                 let span = self.colors.iter().find(|span| {
@@ -256,7 +271,7 @@ impl Editor {
             }
 
             if Point::new(i, line.len()) == self.cursor_position && focused {
-                draw_rectangle(x, y - self.font_size as f32, 2.0, self.font_size as f32, theme.text)
+                draw_rectangle(x, y - self.font_size as f32, 2.0, self.font_size as f32, theme.rosewater)
             }
 
             x = 0.0;
