@@ -30,6 +30,8 @@ pub(crate) struct Editor {
     cursor_position: Point, // line, character
     colors: Vec<ColorSpan>,
     pub(crate) window: Rect,
+    font_size: u16,
+    offset: Vec2
 }
 
 pub enum EditorMessage {
@@ -38,12 +40,14 @@ pub enum EditorMessage {
 }
 
 impl Editor {
-    pub fn new(window: Rect) -> Self {
+    pub fn new(window: Rect, font_size: u16) -> Self {
         Self {
             lines: vec!["".to_owned()],
             cursor_position: Point::new(0, 0),
             colors: vec![],
             window,
+            font_size,
+            offset: Vec2::ZERO
         }
     }
 
@@ -77,6 +81,10 @@ impl Editor {
     fn insert_str_single_line(&mut self, string: &str) {
         self.lines[self.cursor_position.row].insert_str(self.cursor_position.column, string);
         self.cursor_position.column += string.len();
+    }
+
+    pub fn scroll(&mut self, offset: Vec2) {
+        self.offset += offset
     }
 
     pub fn update(&mut self, message: EditorMessage, highlighter: &mut Highlighter, theme: &Theme) {
@@ -131,6 +139,18 @@ impl Editor {
         if let Err(_) = self.syntax_highlight(highlighter, theme) {
             self.colors = vec![]
         }
+
+        let effective_height = self.cursor_position.row as f32 * self.font_size as f32 - self.offset.y;
+
+        println!("{}", effective_height);
+
+        if effective_height < 0.0 {
+            self.offset.y += effective_height;
+        }
+
+        if effective_height > self.window.h {
+            self.offset.y += effective_height - (self.window.h - self.font_size as f32);
+        }
     }
 
     fn idx_to_point(code: &str, idx: usize) -> Point {
@@ -182,30 +202,31 @@ impl Editor {
         format!("{:>width$} ", i + 1)
     }
 
-    pub fn view(&self, theme: &Theme, font: Option<&Font>, font_size: u16, focused: bool) {
+    pub fn view(&self, theme: &Theme, font: Option<&Font>, focused: bool) {
         set_fullscreen_camera();
         draw_rectangle(self.window.x, self.window.y, self.window.w, self.window.h, theme.surface0);
 
-        set_camera_window(self.window, vec2(0.0, 0.0));
+        set_camera_window(self.window, self.offset);
 
         let mut x = 0.0;
-        let mut y = font_size as f32;
+        let mut y = self.font_size as f32;
 
         for (i, line) in self.lines.iter().enumerate() {
             for symbol in self.format_line_number(i).chars() {
                 let dimensions = draw_text_ex(&symbol.to_string(), x, y, TextParams {
                     color: theme.overlay1,
                     font,
-                    font_size,
+                    font_size: self.font_size,
                     ..Default::default()
                 });
                 x += dimensions.width;
             }
+
             for (j, glyph) in line.chars().enumerate() {
                 let curr = Point::new(i, j);
 
                 if curr == self.cursor_position && focused {
-                    draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text);
+                    draw_rectangle(x, y - self.font_size as f32, 2.0, self.font_size as f32, theme.text);
                 }
 
                 let span = self.colors.iter().find(|span| {
@@ -217,7 +238,7 @@ impl Editor {
                 let dimensions = draw_text_ex(&glyph.to_string(), x, y, TextParams {
                     color,
                     font,
-                    font_size,
+                    font_size: self.font_size,
                     ..Default::default()
                 });
 
@@ -225,11 +246,11 @@ impl Editor {
             }
 
             if Point::new(i, line.len()) == self.cursor_position && focused {
-                draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text)
+                draw_rectangle(x, y - self.font_size as f32, 2.0, self.font_size as f32, theme.text)
             }
 
             x = 0.0;
-            y += font_size as f32;
+            y += self.font_size as f32;
         }
 
         set_default_camera();
