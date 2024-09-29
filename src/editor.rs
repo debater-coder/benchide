@@ -169,6 +169,11 @@ impl Editor {
         Ok(())
     }
 
+    fn format_line_number(&self, i: usize) -> String {
+        let width = self.lines.len().to_string().len();
+        format!("{:>width$} ", i + 1)
+    }
+
     pub fn view(&self, theme: &Theme, font: Option<&Font>, font_size: u16, focused: bool) {
         set_fullscreen_camera();
         draw_rectangle(self.window.x, self.window.y, self.window.w, self.window.h, theme.surface0);
@@ -179,6 +184,15 @@ impl Editor {
         let mut y = font_size as f32;
 
         for (i, line) in self.lines.iter().enumerate() {
+            for symbol in self.format_line_number(i).chars() {
+                let dimensions = draw_text_ex(&symbol.to_string(), x, y, TextParams {
+                    color: theme.overlay1,
+                    font,
+                    font_size,
+                    ..Default::default()
+                });
+                x += dimensions.width;
+            }
             for (j, glyph) in line.chars().enumerate() {
                 if (i, j) == self.cursor_position && focused {
                     draw_rectangle(x, y - font_size as f32, 2.0, font_size as f32, theme.text)
