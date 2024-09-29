@@ -34,6 +34,7 @@ pub(crate) struct Editor {
     offset: Vec2
 }
 
+#[derive(Debug)]
 pub enum EditorMessage {
     Keypress(KeyCode),
     Char(char),

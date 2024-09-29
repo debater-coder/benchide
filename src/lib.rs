@@ -15,6 +15,7 @@ pub struct App {
     editors: HashMap<Uuid, Editor>,
     highlighter: Highlighter,
     focused: Option<Uuid>,
+    mouse_pan: Option<Vec2>
 }
 
 impl Default for App {
@@ -30,14 +31,18 @@ impl Default for App {
             editors,
             highlighter: Highlighter::new(),
             focused: None,
+            mouse_pan: None,
         }
     }
 }
 
+#[derive(Debug)]
 pub enum Message {
     Edit(Uuid, EditorMessage),
     Focus(Option<Uuid>),
     Scroll(Uuid, Vec2),
+    Pan(Vec2),
+    StopPan,
 }
 
 impl App {
@@ -46,26 +51,48 @@ impl App {
             Message::Focus(uuid) => self.focused = uuid,
             Message::Edit(uuid, edit) =>
                 self.editors.get_mut(&uuid).unwrap().update(edit, &mut self.highlighter, &self.theme),
-            Message::Scroll(uuid, offset) => self.editors.get_mut(&uuid).unwrap().scroll(offset)
+            Message::Scroll(uuid, offset) => self.editors.get_mut(&uuid).unwrap().scroll(offset),
+            Message::Pan(mouse) => {
+                if let Some(prev_mouse) = self.mouse_pan {
+                    self.pan(mouse - prev_mouse);
+                }
+                self.mouse_pan = Some(mouse);
+            }
+            Message::StopPan => {
+                self.mouse_pan = None;
+            }
+        }
+    }
+
+    fn pan(&mut self, delta: Vec2) {
+        for (_, editor) in &mut self.editors {
+            editor.window = editor.window.offset(delta);
         }
     }
 
     fn handle_input(&self, messages: &mut Vec<Message>) {
-        if is_mouse_button_pressed(MouseButton::Left) || mouse_wheel() != (0.0, 0.0) {
-            let hovered_editor = self.editors.iter()
-                .find(|(_, editor)| editor.window.contains(Vec2::from(mouse_position())));
+        let hovered_editor = self.editors.iter()
+            .find(|(_, editor)| editor.window.contains(Vec2::from(mouse_position())));
 
-            if is_mouse_button_pressed(MouseButton::Left) {
-                if let Some((uuid, _)) = hovered_editor {
-                    messages.push(Message::Focus(Some(*uuid)))
-                } else {
-                    messages.push(Message::Focus(None))
-                }
-            }
-
+        if is_mouse_button_pressed(MouseButton::Left) {
             if let Some((uuid, _)) = hovered_editor {
-                messages.push(Message::Scroll(*uuid, Vec2::from(mouse_wheel()) * 0.25 * vec2(0.0, -1.0)));
+                messages.push(Message::Focus(Some(*uuid)))
+            } else {
+                messages.push(Message::Focus(None))
             }
+        }
+
+        if let Some((uuid, _)) = hovered_editor {
+            let wheel = mouse_wheel();
+            if wheel.1 != 0.0 {
+                messages.push(Message::Scroll(*uuid, Vec2::from(wheel) * 0.25 * vec2(0.0, -1.0)));
+            }
+        }
+
+        if hovered_editor.is_none() && is_mouse_button_down(MouseButton::Left) {
+            messages.push(Message::Pan(Vec2::from(mouse_position())));
+        } else if self.mouse_pan.is_some() {
+            messages.push(Message::StopPan);
         }
 
         if let Some(uuid) = self.focused {
@@ -91,7 +118,6 @@ impl App {
         }
 
         self.handle_input(&mut messages);
-
         messages
     }
 }
