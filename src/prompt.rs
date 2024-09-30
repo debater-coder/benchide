@@ -93,7 +93,7 @@ impl Prompt {
             x += dimensions.width;
 
         }
-        if self.cursor == self.text.len() + 1 {
+        if self.cursor == self.text.len() {
             draw_rectangle(x, y - 16.0, 2.0, 16.0, theme.rosewater);
         }
 
