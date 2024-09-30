@@ -27,9 +27,6 @@ impl Default for App {
     fn default() -> Self {
         let mut editors = HashMap::new();
 
-        editors.insert(Uuid::new_v4(), Editor::new(Rect::new(500.0, 20.0, 400.0, 400.0), 16));
-        editors.insert(Uuid::new_v4(), Editor::new(Rect::new(20.0, 20.0, 400.0, 400.0), 16));
-
         Self {
             theme: Theme::mocha(),
             font: None,
@@ -94,6 +91,10 @@ impl App {
                                 self.editors.remove(&focused);
                             }
                         },
+
+                        PromptUpdate::OpenFile(filename) => {
+                            self.editors.insert(Uuid::new_v4(), Editor::new(Rect::new(20.0, 20.0, 400.0, 400.0), 16, filename));
+                        }
                         _ => {}
                     }
                     self.prompt_focused = false;

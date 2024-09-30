@@ -52,6 +52,7 @@ impl Prompt {
                         if self.cursor > 0 {
                             self.text.remove(self.cursor - 1);
                         }
+                        self.cursor -= 1;
                         None
                     }
                     key => {

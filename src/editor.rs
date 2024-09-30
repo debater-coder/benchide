@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::io;
+use std::io::{BufRead, BufReader};
 use macroquad::prelude::*;
 use crate::theme::Theme;
 use crate::window::{set_camera_window, set_fullscreen_camera};
@@ -31,7 +34,8 @@ pub(crate) struct Editor {
     colors: Vec<ColorSpan>,
     pub(crate) window: Rect,
     font_size: u16,
-    offset: Vec2
+    offset: Vec2,
+    filename: String
 }
 
 #[derive(Debug)]
@@ -41,15 +45,27 @@ pub enum EditorMessage {
 }
 
 impl Editor {
-    pub fn new(window: Rect, font_size: u16) -> Self {
-        Self {
+    pub fn new(window: Rect, font_size: u16, filename: String) -> Self {
+        let mut editor = Self {
             lines: vec!["".to_owned()],
             cursor_position: Point::new(0, 0),
             colors: vec![],
             window,
             font_size,
-            offset: Vec2::ZERO
-        }
+            offset: Vec2::ZERO,
+            filename
+        };
+
+        let _ = editor.load_file();
+
+        editor
+    }
+
+    fn load_file(&mut self) -> io::Result<()> {
+        let file = File::open(&self.filename)?;
+        self.lines = BufReader::new(file).lines().collect::<Result<_, _>>()?;
+
+        Ok(())
     }
 
     fn move_cursor(&mut self, key: KeyCode) {
