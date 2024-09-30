@@ -231,7 +231,7 @@ impl Editor {
     }
 
     pub fn save(&mut self) {
-        let mut f = std::fs::OpenOptions::new().write(true).truncate(true).open("./file").unwrap();
+        let mut f = std::fs::OpenOptions::new().write(true).truncate(true).create(true).open(&self.filename).unwrap();
 
         f.write_all(self.lines.join("\n").as_ref()).unwrap();
 
