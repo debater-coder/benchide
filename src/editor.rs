@@ -140,8 +140,10 @@ impl Editor {
                         self.cursor_position = Point::new(y + 1, 0);
                     }
                     _ => {
-                        self.lines[y].insert(x, character);
-                        self.cursor_position.column += 1;
+                        if character.is_ascii() && !character.is_control() {
+                            self.lines[y].insert(x, character);
+                            self.cursor_position.column += 1;
+                        }
                     }
                 }
             }

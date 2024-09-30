@@ -89,6 +89,11 @@ impl App {
             Message::PromptEdit(msg) => {
                 if let Some(update) =  self.prompt.update(msg) {
                     match update {
+                        PromptUpdate::CloseActiveFile => {
+                            if let Some(focused) = self.focused {
+                                self.editors.remove(&focused);
+                            }
+                        },
                         _ => {}
                     }
                     self.prompt_focused = false;

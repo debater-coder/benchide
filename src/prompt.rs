@@ -45,7 +45,7 @@ impl Prompt {
                     '\r' => {
                         let update = self.parse_command();
                         self.text.clear();
-
+                        self.cursor = 0;
                         update
                     }
                     '\x08' => {
