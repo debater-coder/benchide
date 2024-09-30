@@ -95,6 +95,10 @@ impl App {
                         PromptUpdate::OpenFile(filename) => {
                             self.editors.insert(Uuid::new_v4(), Editor::new(Rect::new(20.0, 20.0, 400.0, 400.0), 16, filename));
                         }
+
+                        PromptUpdate::SaveActiveFile => {
+                            self.editors.get_mut(&self.focused.unwrap()).unwrap().save()
+                        }
                         _ => {}
                     }
                     self.prompt_focused = false;

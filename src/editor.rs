@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use macroquad::prelude::*;
 use crate::theme::Theme;
 use crate::window::{set_camera_window, set_fullscreen_camera};
@@ -228,6 +228,15 @@ impl Editor {
     fn format_line_number(&self, i: usize) -> String {
         let width = self.lines.len().to_string().len();
         format!("{:>width$} ", i + 1)
+    }
+
+    pub fn save(&mut self) {
+        let mut f = std::fs::OpenOptions::new().write(true).truncate(true).open("./file").unwrap();
+
+        f.write_all(self.lines.join("\n").as_ref()).unwrap();
+
+        f.flush().unwrap();
+
     }
 
     pub fn titlebar(&self) -> Rect {
