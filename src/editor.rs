@@ -242,7 +242,7 @@ impl Editor {
         let titlebar = self.titlebar();
         draw_rectangle(titlebar.x, titlebar.y, titlebar.w, titlebar.h, theme.surface1);
 
-        draw_text_ex("main.py", self.window.x, self.window.y - 4.0, TextParams {
+        draw_text_ex(&self.filename, self.window.x, self.window.y - 4.0, TextParams {
             color: if focused { theme.lavender } else { theme.text },
             font,
             font_size: self.font_size,

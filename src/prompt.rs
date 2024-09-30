@@ -51,8 +51,8 @@ impl Prompt {
                     '\x08' => {
                         if self.cursor > 0 {
                             self.text.remove(self.cursor - 1);
+                            self.cursor -= 1;
                         }
-                        self.cursor -= 1;
                         None
                     }
                     key => {
