@@ -68,7 +68,7 @@ impl Prompt {
     pub(crate) fn view(&self, theme: &Theme, font: Option<&Font>) {
         set_fullscreen_camera();
         let mut x = 0.0;
-        let y = screen_height();
+        let y = screen_height() - 8.0;
 
         let dimensions = draw_text_ex("> ", x, y, TextParams {
             color: theme.text,
