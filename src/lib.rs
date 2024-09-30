@@ -8,6 +8,7 @@ use crate::theme::Theme;
 pub mod theme;
 mod editor;
 mod window;
+mod prompt;
 
 pub struct App {
     theme: Theme,
@@ -15,7 +16,8 @@ pub struct App {
     editors: HashMap<Uuid, Editor>,
     highlighter: Highlighter,
     focused: Option<Uuid>,
-    move_target: Option<Uuid>
+    move_target: Option<Uuid>,
+    prompt_focused: bool
 }
 
 impl Default for App {
@@ -31,7 +33,8 @@ impl Default for App {
             editors,
             highlighter: Highlighter::new(),
             focused: None,
-            move_target: None
+            move_target: None,
+            prompt_focused: false
         }
     }
 }
