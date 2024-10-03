@@ -2,7 +2,7 @@ use benchide::App;
 use macroquad::prelude::*;
 #[macroquad::main("benchide")]
 async fn main() {
-    let mut app = App::default();
+    let mut app = App::new();
 
     let font = load_ttf_font("./JetBrainsMono-Regular.ttf").await.unwrap();
 

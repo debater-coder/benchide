@@ -1,6 +1,8 @@
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
 use macroquad::prelude::*;
 use crate::theme::Theme;
 use crate::window::{set_camera_window, set_fullscreen_camera};
@@ -46,7 +48,7 @@ pub enum EditorMessage {
 
 impl Editor {
     pub fn new(window: Rect, font_size: u16, filename: String) -> Self {
-        let mut editor = Self {
+        let editor = Self {
             lines: vec!["".to_owned()],
             cursor_position: Point::new(0, 0),
             colors: vec![],
@@ -56,12 +58,14 @@ impl Editor {
             filename
         };
 
-        let _ = editor.load_file();
-
         editor
     }
 
-    fn load_file(&mut self) -> io::Result<()> {
+    pub(crate) fn load_string(&mut self, string: String) {
+        self.lines = string.lines().map(|s| s.to_string()).collect();
+    }
+
+    pub(crate) fn load_file(&mut self) -> io::Result<()> {
         let file = File::open(&self.filename)?;
         self.lines = BufReader::new(file).lines().collect::<Result<_, _>>()?;
 
@@ -190,7 +194,14 @@ impl Editor {
 
     fn syntax_highlight(&mut self, highlighter: &mut Highlighter, theme: &Theme) -> inkjet::Result<()> {
         let code = self.lines.join("\n");
-        let highlights = highlighter.highlight_raw(Language::Python, &code)?;
+
+        let language = Path::new(&self.filename)
+            .extension()
+            .and_then(OsStr::to_str)
+            .and_then(Language::from_token)
+            .unwrap_or(Language::Plaintext);
+
+        let highlights = highlighter.highlight_raw(language, &code)?;
 
         self.colors = vec![];
 

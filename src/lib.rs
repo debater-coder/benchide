@@ -20,24 +20,26 @@ pub struct App {
     move_target: Option<Uuid>,
     prompt_focused: bool,
     released: bool,
-    prompt: Prompt
+    prompt: Prompt,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        let mut editors = HashMap::new();
-
-        Self {
+impl App {
+    pub fn new() -> Self {
+        let mut app = Self {
             theme: Theme::mocha(),
             font: None,
-            editors,
+            editors: HashMap::new(),
             highlighter: Highlighter::new(),
             focused: None,
             move_target: None,
             prompt_focused: false,
             released: true,
-            prompt: Prompt::new()
-        }
+            prompt: Prompt::new(),
+        };
+
+        app.open_help();
+
+        app
     }
 }
 
@@ -50,22 +52,35 @@ pub enum Message {
     MoveTarget(Option<Uuid>),
     FocusPrompt(bool),
     KeyComboDone,
-    PromptEdit(EditorMessage)
+    PromptEdit(EditorMessage),
 }
 
 impl App {
+    fn open_help(&mut self) {
+        self.editors.insert(Uuid::new_v4(), {
+            let mut editor = Editor::new(
+                Rect::new(20.0, 20.0, 800.0, 800.0),
+                16,
+                "usage.md".to_string()
+            );
+            editor.load_string(include_str!("../usage.md").to_string());
+            editor
+        });
+    }
+
     pub fn update(&mut self, message: Message) {
         match message {
             Message::Focus(uuid) => self.focused = uuid,
-            Message::Edit(uuid, edit) =>
-                self.editors.get_mut(&uuid).unwrap().update(edit, &mut self.highlighter, &self.theme),
+            Message::Edit(uuid, edit) => {
+                self.editors.get_mut(&uuid).and_then(|editor| Some(editor.update(edit, &mut self.highlighter, &self.theme)));
+            },
             Message::Scroll(uuid, offset) => self.editors.get_mut(&uuid).unwrap().scroll(offset),
             Message::Pan(delta) => {
                 match self.move_target {
                     Some(target) => {
                         let editor = self.editors.get_mut(&target).unwrap();
                         editor.window = editor.window.offset(delta)
-                    },
+                    }
                     None => {
                         self.pan(delta)
                     }
@@ -84,22 +99,30 @@ impl App {
                 self.released = true;
             }
             Message::PromptEdit(msg) => {
-                if let Some(update) =  self.prompt.update(msg) {
+                if let Some(update) = self.prompt.update(msg) {
                     match update {
                         PromptUpdate::CloseActiveFile => {
                             if let Some(focused) = self.focused {
                                 self.editors.remove(&focused);
                             }
-                        },
+                        }
 
                         PromptUpdate::OpenFile(filename) => {
-                            self.editors.insert(Uuid::new_v4(), Editor::new(Rect::new(20.0, 20.0, 400.0, 400.0), 16, filename));
+                            self.editors.insert(Uuid::new_v4(), {
+                                let mut editor = Editor::new(Rect::new(20.0, 20.0, 800.0, 800.0), 16, filename);
+                                let _ = editor.load_file();
+                                editor
+                            });
                         }
 
                         PromptUpdate::SaveActiveFile => {
                             self.editors.get_mut(&self.focused.unwrap()).unwrap().save()
                         }
-                        _ => {}
+                        PromptUpdate::SaveAs(_) => {}
+                        PromptUpdate::OpenHelp => {
+                            self.open_help();
+                        }
+                        PromptUpdate::Status(_) => {}
                     }
                     self.prompt_focused = false;
                 }
